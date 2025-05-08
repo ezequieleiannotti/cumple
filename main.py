@@ -1,8 +1,9 @@
 import os
+import json
 from flask import Flask, request, make_response
 from dotenv import load_dotenv
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials  # Cambio importante
 from slack_utils import verificar_slack_request, manejar_comando
 
 load_dotenv()
@@ -10,24 +11,22 @@ app = Flask(__name__)
 
 # Función para acceder a Google Sheets
 def obtener_datos_google_sheets():
-    # Define el alcance de acceso
+    # Cargamos el JSON desde la variable de entorno
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    creds_dict = json.loads(creds_json)
+
+    # Creamos las credenciales
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 
-    # Ruta al archivo JSON de credenciales de Google Cloud
-    json_path = "path/to/your/credentials.json"  # Cambia esta ruta a donde guardaste tu archivo JSON
-
-    # Autenticación con el archivo JSON de credenciales
-    creds = ServiceAccountCredentials.from_json_keyfile_name(json_path, scope)
-
-    # Autorizar acceso
+    # Autorizamos el acceso
     client = gspread.authorize(creds)
 
-    # Abre tu hoja de cálculo por nombre
-    spreadsheet = client.open("flow").sheet1  # Cambia esto al nombre correcto de tu hoja
+    # Abre la hoja por ID (más seguro que por nombre)
+    spreadsheet = client.open_by_key("flow").sheet1  # reemplazá con el ID real
 
     # Obtiene todos los registros
     data = spreadsheet.get_all_records()
-
     return data
 
 @app.route("/cumple", methods=["POST"])
@@ -40,16 +39,15 @@ def comando_cumple():
     text = request.form.get("text")
     comando = request.form.get("command")
 
-    # Aquí puedes obtener datos de Google Sheets si es necesario
     datos_cumple = obtener_datos_google_sheets()
-    print(datos_cumple)  # Muestra los datos en consola (opcional)
+    print(datos_cumple)  # opcional
 
     respuesta = manejar_comando(text, user_id, user_name, comando)
     return make_response(respuesta, 200)
 
 @app.route("/cumples", methods=["POST"])
 def comando_cumples():
-    return comando_cumple()  # Usa la misma lógica
+    return comando_cumple()
 
 @app.route("/", methods=["GET"])
 def index():
@@ -57,3 +55,4 @@ def index():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
