@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credenciales.json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name("/etc/secrets/credenciales.json", scope)
 client = gspread.authorize(creds)
 
 sheet = client.open_by_key(os.getenv("SHEET_ID")).worksheet(os.getenv("SHEET_NAME"))
